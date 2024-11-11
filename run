@@ -1,0 +1,16 @@
+#!/usr/bin/bash
+
+function calc_md5(){
+	md5=$(cat main.py | md5sum | awk '{print $1}')
+	echo $md5
+}
+
+while [[ true ]]; do
+	new_md5=$(calc_md5)
+	if [[ $old_md5 != $new_md5 ]]; then
+		clear
+		python main.py
+	fi
+	old_md5=$new_md5
+	sleep 0.1
+done
