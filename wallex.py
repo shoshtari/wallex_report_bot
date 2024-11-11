@@ -1,39 +1,45 @@
-import requests
-from typing import List
-import configs
-from dataclasses import dataclass
-from retry import retry
-from decimal import Decimal
-import dtos
-from datetime import datetime
-
 import logging
+from dataclasses import dataclass
+from datetime import datetime
+from decimal import Decimal
+from typing import List
+
+import requests
+from retry import retry
+
+import configs
+import dtos
 
 logger = logging.getLogger(__name__)
 
 
 class WallexHandler:
     IGNORE_CURRENCIES = ("XTMN",)
+
     def __init__(self, auth_token: str):
         self.__base_url = "https://api.wallex.ir/v1"
         self.__auth = auth_token
-    
-    @retry(tries = 3)
-    def __send_request_to_wallex(self, url: str, include_auth: bool = False, method: str = "GET"):
+
+    @retry(tries=3)
+    def __send_request_to_wallex(
+        self, url: str, include_auth: bool = False, method: str = "GET"
+    ):
         headers = {}
         if include_auth:
             headers["Authorization"] = self.__auth
 
-        res = requests.request(method, url, headers = headers, timeout = configs.REQUEST_TIMEOUT)
+        res = requests.request(
+            method, url, headers=headers, timeout=configs.REQUEST_TIMEOUT
+        )
         res.raise_for_status()
 
         assert res.json()["success"]
 
         return res.json()["result"]
-        
+
     def get_market_prices(self):
         url = f"{self.__base_url}/markets"
-        res = self.__send_request_to_wallex(url)["result"]["symbols"]
+        res = self.__send_request_to_wallex(url)["symbols"]
 
         symbols = list(res.keys())
         ans = []
@@ -45,7 +51,7 @@ class WallexHandler:
                 logger.warning(f"ignoring symbol {symbol} with '-' as a price")
                 continue
             ans.append(
-                SymbolStat(
+                dtos.SymbolStat(
                     name=symbol,
                     date=datetime.now(),
                     sell_price=Decimal(symbol_data["askPrice"]),
@@ -62,19 +68,21 @@ class WallexHandler:
 
         ans = []
         for bot_dict in res["bots"]:
-            ans.append(dtos.TradeBot(
-                bot_id = bot_dict["ID"],
-                bot_handler = "wallex",
-                strategy=bot_dict["strategy"]["ENName"],
-                symbols = bot_dict["symbols"],
-                original_tmn_value = bot_dict["initialInventorySnapshot"]["totalWorth"]["TMN"],
-                current_tmn_value=bot_dict["totalWorth"]["aggregated"]["TMN"]
-
-
-            ))
-        return ans 
-
-
+            ans.append(
+                dtos.TradeBot(
+                    bot_id=bot_dict["ID"],
+                    bot_handler="wallex",
+                    strategy=bot_dict["strategy"]["ENName"],
+                    symbols=bot_dict["symbols"],
+                    original_tmn_value=Decimal(
+                        bot_dict["initialInventorySnapshot"]["totalWorth"]["TMN"]
+                    ),
+                    current_tmn_value=Decimal(
+                        bot_dict["totalWorth"]["aggregated"]["TMN"]
+                    ),
+                )
+            )
+        return ans
 
     def get_global_prices(self):
         url = f"{self.__base_url}/currencies/stats"
@@ -97,4 +105,3 @@ class WallexHandler:
             )
 
         return ans
-print(WallexHandler(configs.WALLEX_AUTH_TOKEN).get_running_bots())

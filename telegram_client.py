@@ -1,9 +1,12 @@
-import telegram
 import asyncio
 
+import telegram
 
-class TelegramHandler:
-    def __init__(self, bot_token: str, chat_id: str, base_url="https://api.telegram.org"):
+
+class TelegramClient:
+    def __init__(
+        self, bot_token: str, chat_id: str, base_url="https://api.telegram.org"
+    ):
         self.__bot = telegram.Bot(bot_token)
         self.__chat_id = chat_id
 
@@ -12,4 +15,5 @@ class TelegramHandler:
 
     async def edit_message(self, message_id, text):
         await self.__bot.edit_message_text(
-            text=text, message_id=message_id, chat_id=self.__chat_id)
+            text=text, message_id=message_id, chat_id=self.__chat_id
+        )

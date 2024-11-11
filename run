@@ -1,15 +1,22 @@
 #!/usr/bin/bash
 
 function calc_md5(){
-	md5=$(cat main.py | md5sum | awk '{print $1}')
+	md5=$(cat $(find . -name "*.py") | md5sum | awk '{print $1}')
 	echo $md5
 }
+
+source venv/bin/activate 
+
+run_file=$1
+if [[ -z $run_file ]]; then 
+	run_file="main.py"
+fi 
 
 while [[ true ]]; do
 	new_md5=$(calc_md5)
 	if [[ $old_md5 != $new_md5 ]]; then
 		clear
-		python main.py
+		python $run_file
 	fi
 	old_md5=$new_md5
 	sleep 0.1
